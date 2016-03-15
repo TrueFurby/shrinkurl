@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>ShrinkURL</title>
+</head>
+<body>
+    <h2>ShrinkURL - url shortener</h2>
+    <form id="shrinkForm" action="/add" method="POST">
+        <input name="url" type="text">
+        <input type="submit" value="Shrink">
+    </form>
+    <p>
+        <a id="shrunk" href=""></a>
+    </p>
+</body>
+<script>
+    var shrinkForm = document.getElementById("shrinkForm")
+    var shrunkUrl = document.getElementById("shrunk")
+    shrinkForm.addEventListener("submit", function(e) {
+        e.preventDefault()
+        var form = e.target
+        var data = new FormData(form)
+        var req = new XMLHttpRequest()
+
+        req.onreadystatechange = function() {
+            if (req.readyState == 4) {
+                if (req.status >= 200 && req.status <= 206) {
+                    var data = JSON.parse(req.responseText)
+                    var link = window.location.protocol + "//" + window.location.host + "/" + data.hash
+                    shrunkUrl.setAttribute('href', link)
+                    shrunkUrl.innerText = link
+                } else {
+                    alert("shrinking failed: " + req.responseText)
+                }
+            }
+        }
+        req.open(form.method, form.action)
+        req.send(data)
+    })
+</script>
+</html>
