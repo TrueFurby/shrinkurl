@@ -4,22 +4,32 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
-func (a *App) indexHandler(w http.ResponseWriter, r *http.Request) {
-	var path = r.URL.Path
+func NewRouter(app *App) *mux.Router {
+	var r = mux.NewRouter()
 
-	if path == "/" {
-		http.ServeFile(w, r, "./index.html")
-	} else {
-		a.redirectHandler(w, r)
-	}
+	r.Path("/{hash:[a-z0-9]{6}}").Methods("GET").
+		HandlerFunc(app.redirectHandler)
+
+	r.Path("/add").Methods("POST").
+		HandlerFunc(app.addHandler)
+
+	r.Path("/check").Methods("GET").
+		HandlerFunc(app.checkHandler)
+
+	r.Path("/remove").Methods("DELETE").
+		HandlerFunc(app.removeHandler)
+
+	return r
 }
 
 func (a *App) redirectHandler(w http.ResponseWriter, r *http.Request) {
-	var hash = r.URL.Path[1:]
+	var hash = mux.Vars(r)["hash"]
 
-	if cached := a.cache.Get(hash); cached != "" {
+	if cached := a.Cache.Get(hash); cached != "" {
 		log.Println("using cached url", cached)
 		http.Redirect(w, r, cached, http.StatusMovedPermanently)
 		return
@@ -34,17 +44,13 @@ func (a *App) redirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.cache.Add(hash, u.Url)
+	a.Cache.Add(hash, u.Url)
 
 	log.Println(hash, "redirecting to", u.Url)
 	http.Redirect(w, r, u.Url, http.StatusMovedPermanently)
 }
 
 func (a *App) addHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "wrong method", http.StatusMethodNotAllowed)
-		return
-	}
 	var inputUrl = r.FormValue("url")
 
 	destUrl, err := parseUrl(inputUrl)
@@ -73,10 +79,6 @@ func (a *App) addHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) checkHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "wrong method", http.StatusMethodNotAllowed)
-		return
-	}
 	var hash = r.FormValue("hash")
 
 	u, err := a.Url.Get(hash)
@@ -92,10 +94,6 @@ func (a *App) checkHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) removeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "DELETE" {
-		http.Error(w, "wrong method", http.StatusMethodNotAllowed)
-		return
-	}
 	var hash = r.FormValue("hash")
 
 	if u, err := a.Url.Get(hash); err != nil {
@@ -112,7 +110,7 @@ func (a *App) removeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.cache.Remove(hash)
+	a.Cache.Remove(hash)
 
 	log.Println(hash, "removed")
 	writeJson(w, http.StatusNoContent, nil)

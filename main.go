@@ -3,25 +3,31 @@ package main
 import (
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type App struct {
 	*Storage
-	*http.ServeMux
-	cache *Cache
+	*mux.Router
+	Cache *Cache
+}
+
+func NewApp() *App {
+	var a = &App{
+		Storage: NewStorage("./url.db"),
+		Cache:   NewCache(10),
+	}
+	a.Router = NewRouter(a)
+	return a
 }
 
 func main() {
-	var app = &App{
-		Storage:  NewStorage("./url.db"),
-		ServeMux: http.NewServeMux(),
-		cache:    NewCache(10),
-	}
+	var app = NewApp()
 
-	app.HandleFunc("/add", app.addHandler)
-	app.HandleFunc("/check", app.checkHandler)
-	app.HandleFunc("/remove", app.removeHandler)
-	app.HandleFunc("/", app.indexHandler)
+	app.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./index.html")
+	}).Methods("GET")
 
 	if err := http.ListenAndServe(":7788", app); err != nil {
 		log.Fatal(err)
