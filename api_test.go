@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -28,7 +31,7 @@ func TestAdd(t *testing.T) {
 		payload = url.Values{"url": []string{"google.com"}}
 	)
 
-	resp, err := http.DefaultClient.PostForm(apiurl, payload)
+	resp, err := http.PostForm(apiurl, payload)
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,5 +45,42 @@ func TestAdd(t *testing.T) {
 
 	if resp.StatusCode != 201 {
 		t.Errorf("expected 201 but got: %d", resp.StatusCode)
+	}
+}
+
+func TestCheck(t *testing.T) {
+	var (
+		hash   = makeHash("google.com")
+		query  = url.Values{"hash": []string{hash}}
+		apiurl = server.URL + "/check" + fmt.Sprintf("?%s", query.Encode())
+	)
+
+	dburl := Url{
+		Id:   1,
+		Hash: hash,
+		Url:  "http://google.com",
+	}
+	mockStore.urls[hash] = dburl
+
+	resp, err := http.Get(apiurl)
+	if err != nil {
+		t.Error(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error(err)
+	} else {
+		t.Logf("response: %s", string(body))
+	}
+
+	if resp.StatusCode != 200 {
+		t.Errorf("expected 200 but got: %d", resp.StatusCode)
+	}
+
+	b, _ := json.Marshal(dburl)
+	if !bytes.Equal(b, bytes.TrimSpace(body)) {
+		t.Errorf("expected '%s' but got: '%s'", string(b), string(body))
 	}
 }

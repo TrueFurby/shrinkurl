@@ -63,19 +63,22 @@ func (a *App) addHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else if u.Id == 0 {
-		u.Hash = makeHash(destUrl)
-		u.Url = destUrl.String()
-		if err := a.UrlStore().Update(&u); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		log.Println(destUrl, "added")
-		writeJson(w, http.StatusCreated, u)
+	} else if u.Id != 0 {
+		writeJson(w, http.StatusOK, u)
 		return
 	}
 
-	writeJson(w, http.StatusOK, u)
+	u = Url{
+		Hash: makeHash(destUrl.Host),
+		Url:  destUrl.String(),
+	}
+	if err := a.UrlStore().Update(&u); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println(destUrl, "added")
+	writeJson(w, http.StatusCreated, u)
+
 }
 
 func (a *App) checkHandler(w http.ResponseWriter, r *http.Request) {

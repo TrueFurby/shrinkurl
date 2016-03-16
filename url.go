@@ -20,8 +20,8 @@ type Url struct {
 	Url  string `json:"url"`
 }
 
-func makeHash(u *url.URL) string {
-	data := []byte(u.String())
+func makeHash(u string) string {
+	data := []byte(u)
 	hash := fmt.Sprintf("%x", md5.Sum(data))
 	return hash[:6]
 }
