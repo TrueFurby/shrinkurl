@@ -7,7 +7,7 @@ import (
 	"net/url"
 )
 
-type UrlRepo interface {
+type UrlStore interface {
 	Update(u *Url) error
 	Get(hash string) (Url, error)
 	GetByUrl(url string) (Url, error)

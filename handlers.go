@@ -35,7 +35,7 @@ func (a *App) redirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := a.Url.Get(hash)
+	u, err := a.UrlStore().Get(hash)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -59,14 +59,14 @@ func (a *App) addHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := a.Url.GetByUrl(destUrl.String())
+	u, err := a.UrlStore().GetByUrl(destUrl.String())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	} else if u.Id == 0 {
 		u.Hash = makeHash(destUrl)
 		u.Url = destUrl.String()
-		if err := a.Url.Update(&u); err != nil {
+		if err := a.UrlStore().Update(&u); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -81,7 +81,7 @@ func (a *App) addHandler(w http.ResponseWriter, r *http.Request) {
 func (a *App) checkHandler(w http.ResponseWriter, r *http.Request) {
 	var hash = r.FormValue("hash")
 
-	u, err := a.Url.Get(hash)
+	u, err := a.UrlStore().Get(hash)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -96,7 +96,7 @@ func (a *App) checkHandler(w http.ResponseWriter, r *http.Request) {
 func (a *App) removeHandler(w http.ResponseWriter, r *http.Request) {
 	var hash = r.FormValue("hash")
 
-	if u, err := a.Url.Get(hash); err != nil {
+	if u, err := a.UrlStore().Get(hash); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	} else if u.Id == 0 {
@@ -104,7 +104,7 @@ func (a *App) removeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := a.Url.Remove(hash)
+	err := a.UrlStore().Remove(hash)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

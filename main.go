@@ -8,14 +8,14 @@ import (
 )
 
 type App struct {
-	*Storage
+	Storage
 	*mux.Router
 	Cache *Cache
 }
 
 func NewApp() *App {
 	var a = &App{
-		Storage: NewStorage("./url.db"),
+		Storage: NewStorage("sqlite3", "./url.db"),
 		Cache:   NewCache(10),
 	}
 	a.Router = NewRouter(a)

@@ -6,12 +6,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type Storage struct {
-	Url UrlRepo
+type Storage interface {
+	UrlStore() UrlStore
 }
 
-func NewStorage(file string) *Storage {
-	db, err := sql.Open("sqlite3", file)
+type storage struct {
+	url *urlStore
+}
+
+func (s *storage) UrlStore() UrlStore {
+	return s.url
+}
+
+func NewStorage(driver, src string) *storage {
+	db, err := sql.Open(driver, src)
 	if err != nil {
 		panic(err)
 	}
@@ -20,8 +28,8 @@ func NewStorage(file string) *Storage {
 		panic(err)
 	}
 
-	return &Storage{
-		Url: &urlStorage{db},
+	return &storage{
+		&urlStore{db},
 	}
 }
 
@@ -32,11 +40,11 @@ const urlSchema = `CREATE TABLE IF NOT EXISTS urls (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS duplicateUrl ON urls(hash);`
 
-type urlStorage struct {
+type urlStore struct {
 	*sql.DB
 }
 
-func (db *urlStorage) Update(u *Url) error {
+func (db *urlStore) Update(u *Url) error {
 	result, err := db.Exec("INSERT INTO urls (hash, url) VALUES (?, ?)", u.Hash, u.Url)
 	if err != nil {
 		return err
@@ -45,7 +53,7 @@ func (db *urlStorage) Update(u *Url) error {
 	return err
 }
 
-func (db *urlStorage) Get(hash string) (u Url, err error) {
+func (db *urlStore) Get(hash string) (u Url, err error) {
 	row := db.QueryRow("SELECT id, hash, url FROM urls WHERE hash=?", hash)
 	if err = row.Scan(&u.Id, &u.Hash, &u.Url); err != nil {
 		if err == sql.ErrNoRows {
@@ -56,7 +64,7 @@ func (db *urlStorage) Get(hash string) (u Url, err error) {
 	return u, nil
 }
 
-func (db *urlStorage) GetByUrl(url string) (u Url, err error) {
+func (db *urlStore) GetByUrl(url string) (u Url, err error) {
 	row := db.QueryRow("SELECT id, hash, url FROM urls WHERE url=?", url)
 	if err = row.Scan(&u.Id, &u.Hash, &u.Url); err != nil {
 		if err == sql.ErrNoRows {
@@ -67,7 +75,7 @@ func (db *urlStorage) GetByUrl(url string) (u Url, err error) {
 	return u, nil
 }
 
-func (db *urlStorage) Remove(hash string) error {
+func (db *urlStore) Remove(hash string) error {
 	_, err := db.Exec("DELETE FROM urls WHERE hash=?", hash)
 	return err
 }
